@@ -176,6 +176,14 @@ func resourcePlaybook() *schema.Resource {
 				Description: "ID of the desired vault(s).",
 			},
 
+			"inventory": {
+				Type:		 schema.TypeString,
+				Required:	 false,
+				Optional: 	 true,
+				Default:	 "",
+				Description: "Path to custom Ansible inventory.",
+			}
+
 			// computed
 			// debug output
 			"args": {
@@ -328,6 +336,15 @@ func resourcePlaybookCreate(ctx context.Context, data *schema.ResourceData, meta
 			Severity: diag.Error,
 			Summary:  "ERROR [%s]: couldn't get 'vault_id'!",
 			Detail:   ansiblePlaybook,
+		})
+	}
+
+	inventory, okay := data.Get("inventory").(string)
+	if !okay {
+		diags = append(diags, diag.Diagnostic{
+			Severity: diag.Error,
+			Summary:  "ERROR [%s]: couldn't get 'inventory'!",
+			Detail:	  ansiblePlaybook,
 		})
 	}
 
@@ -565,7 +582,6 @@ func resourcePlaybookUpdate(ctx context.Context, data *schema.ResourceData, _ in
 	}
 
 	argsTf, okay := data.Get("args").([]interface{})
-
 	if !okay {
 		diags = append(diags, diag.Diagnostic{
 			Severity: diag.Error,
@@ -574,34 +590,37 @@ func resourcePlaybookUpdate(ctx context.Context, data *schema.ResourceData, _ in
 		})
 	}
 
-	tempInventoryFile, okay := data.Get("temp_inventory_file").(string)
+	tempInventoryFile, okay := data.Get("inventory").(string)
 	if !okay {
-		diags = append(diags, diag.Diagnostic{
-			Severity: diag.Error,
-			Summary:  "ERROR [%s]: couldn't get 'temp_inventory_file'!",
-			Detail:   ansiblePlaybook,
-		})
-	}
 
-	inventoryFileNamePrefix := ".inventory-"
-
-	if tempInventoryFile == "" {
-		tempFileName, diagsFromUtils := providerutils.BuildPlaybookInventory(
-			inventoryFileNamePrefix+"*.ini",
-			name,
-			-1,
-			groups,
-		)
-		tempInventoryFile = tempFileName
-
-		diags = append(diags, diagsFromUtils...)
-
-		if err := data.Set("temp_inventory_file", tempInventoryFile); err != nil {
+		tempInventoryFile, okay := data.Get("temp_inventory_file").(string)
+		if !okay {
 			diags = append(diags, diag.Diagnostic{
 				Severity: diag.Error,
-				Summary:  "ERROR [ansible-playbook]: couldn't set 'temp_inventory_file'!",
+				Summary:  "ERROR [%s]: couldn't get 'temp_inventory_file'!",
 				Detail:   ansiblePlaybook,
 			})
+		}
+
+		inventoryFileNamePrefix := ".inventory-"
+		if tempInventoryFile == "" {
+			tempFileName, diagsFromUtils := providerutils.BuildPlaybookInventory(
+				inventoryFileNamePrefix+"*.ini",
+				name,
+				-1,
+				groups,
+			)
+			tempInventoryFile = tempFileName
+
+			diags = append(diags, diagsFromUtils...)
+
+			if err := data.Set("temp_inventory_file", tempInventoryFile); err != nil {
+				diags = append(diags, diag.Diagnostic{
+					Severity: diag.Error,
+					Summary:  "ERROR [ansible-playbook]: couldn't set 'temp_inventory_file'!",
+					Detail:   ansiblePlaybook,
+				})
+			}
 		}
 	}
 
