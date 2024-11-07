@@ -34,3 +34,8 @@ releases:
     - quote-extra-vars.yml
     - update_dependencies.yml
     release_date: '2024-05-07'
+  1.4.0:
+    changes:
+      minor_changes:
+      - resource/ansible_playbook - Inventory path can be defined instead of temporary auto-generated one.
+    release_date: '2024-11-07'
